@@ -192,3 +192,60 @@ valgrind 编译时候只需要加个 -g 然后，使用   --tool=memcheck --show
 
 使用cppcheck  + valgrind 看来是个不错的组合  
 ![](vx_images/89722567037452.png =716x)
+
+现在有一个更为轻量的工具  dmalloc ,让我们来试一下，我在busybox 中也确实发现了它
+
+安装和使用 参考 
+点击链接查看和 Kimi 智能助手的对话 https://kimi.moonshot.cn/share/cs6bh9rmvq8n5qfs757g
+
+测试代码
+```cpp
+
+//测试一下dmalloc
+
+#include <iostream>
+#ifdef DMALLOC
+#include "dmalloc.h"
+#endif
+
+int main() {
+    int *array = (int *)malloc(10 * sizeof(int)); // 分配内存
+
+    if (array == NULL) {
+        std::cerr << "Memory allocation failed." << std::endl;
+        return 1;
+    }
+
+    // 初始化数组
+    for (int i = 0; i < 10; i++) {
+        array[i] = i;
+    }
+
+    // 打印数组
+    for (int i = 0; i < 10; i++) {
+        std::cout << "Element " << i << ": " << array[i] << std::endl;
+    }
+
+    char buf[10]; // 缓冲区溢出，dmalloc 能不能检测？
+    buf[10] = 23;   
+
+    //free(array); // 释放内存
+
+#ifdef DMALLOC
+    dmalloc_shutdown(); // 关闭dmalloc并输出日志
+#endif
+
+    return 0;
+}
+//g++ -o test_dmalloc main.cpp -DDMALLOC -L/usr/local/lib -ldmalloc
+//export LD_LIBRARY_PATH=/opt/dmalloc/lib:$LD_LIBRARY_PATH
+//export DMALLOC_OPTIONS="debug=0x4f4e503,log=dmalloc.log"
+//./test_dmalloc
+
+```
+![](vx_images/194482504266209.png =466x)
+
+比valgrind 轻便但是同样检测不出来 内存的越界访问。  但是如果移植 valgrind 太麻烦不妨试一下  dmalloc
+
+ 
+**静态分析 + 动态检查**
